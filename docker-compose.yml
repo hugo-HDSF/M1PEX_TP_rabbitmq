@@ -1,0 +1,52 @@
+networks:
+  m1pex-network:
+    driver: bridge
+
+services:
+  m1pex-server:
+    build:
+      context: ./server
+    working_dir: /app
+    environment:
+      AMQP_URL: amqp://m1pex-rabbitmq:5672
+      PORT: 10101
+    volumes:
+      - ./server:/app:cached
+      - /app/node_modules
+    ports:
+      - "10101:10101"
+    depends_on:
+      - m1pex-rabbitmq
+    restart: on-failure
+    command: npm run start
+    networks:
+      - m1pex-network
+
+  m1pex-client:
+    build:
+        context: ./client
+    working_dir: /app
+    environment:
+      PORT: 3050
+      REACT_APP_WS_PORT: 10101
+      REACT_APP_WS_URL: ws://localhost:10101
+    volumes:
+      - ./client:/app:cached
+      - /app/node_modules
+    ports:
+        - "3050:3050"
+    depends_on:
+      - m1pex-server
+    restart: on-failure
+    command: npm run start
+    networks:
+      - m1pex-network
+
+  m1pex-rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "8080:15672"
+      - "5672:5672"
+    restart: always
+    networks:
+      - m1pex-network
